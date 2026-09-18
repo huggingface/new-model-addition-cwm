@@ -8,12 +8,16 @@ on:
     paths:
       - 'src/transformers/models/*/modeling_*'
 
+permissions: {}
+
 jobs:
   notify_new_model:
+    permissions:
+      contents: read
     name: Notify new model
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - name: Check new model
@@ -38,7 +42,7 @@ jobs:
 
       - name: Notify
         if: ${{ env.NEW_MODEL != ''}}
-        uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d
+        uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d # v4.0.0
         with:
           # Slack channel id, channel name, or user id to post message.
           # See also: https://api.slack.com/methods/chat.postMessage#channels

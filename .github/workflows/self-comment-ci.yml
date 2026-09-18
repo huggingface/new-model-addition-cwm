@@ -9,7 +9,6 @@ on:
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.issue.number }}-${{ startsWith(github.event.comment.body, 'run-slow') || startsWith(github.event.comment.body, 'run slow') || startsWith(github.event.comment.body, 'run_slow') }}
   cancel-in-progress: true
-permissions: read-all
 
 env:
   HF_HOME: /mnt/cache
@@ -24,8 +23,11 @@ env:
   TF_FORCE_GPU_ALLOW_GROWTH: true
   CUDA_VISIBLE_DEVICES: 0,1
 
+permissions: {}
+
 jobs:
   get-pr-number:
+    permissions: {}
     runs-on: ubuntu-22.04
     name: Get PR number
     # For security: only allow team members to run
@@ -35,9 +37,12 @@ jobs:
     steps:
       - name: Get PR number
         shell: bash
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_PULL_REQUEST: ${{ github.event.issue.pull_request }}
         run: |
-          if [[ "${{ github.event.issue.number }}" != "" && "${{ github.event.issue.pull_request }}" != "" ]]; then
-            echo "PR_NUMBER=${{ github.event.issue.number }}" >> $GITHUB_ENV
+          if [[ "$ISSUE_NUMBER" != "" && "$ISSUE_PULL_REQUEST" != "" ]]; then
+            echo "PR_NUMBER=$ISSUE_NUMBER" >> $GITHUB_ENV
           else
             echo "PR_NUMBER=" >> $GITHUB_ENV
           fi
@@ -45,13 +50,15 @@ jobs:
       - name: Check PR number
         shell: bash
         run: |
-          echo "${{ env.PR_NUMBER }}"
+          echo "$PR_NUMBER"
 
       - name: Set PR number
         id: set_pr_number
-        run: echo "PR_NUMBER=${{ env.PR_NUMBER }}" >> "$GITHUB_OUTPUT"
+        run: echo "PR_NUMBER=$PR_NUMBER" >> "$GITHUB_OUTPUT"
 
   get-sha:
+    permissions:
+      contents: read
     runs-on: ubuntu-22.04
     needs: get-pr-number
     if: ${{ needs.get-pr-number.outputs.PR_NUMBER != ''}}
@@ -59,7 +66,7 @@ jobs:
       PR_HEAD_SHA: ${{ steps.get_sha.outputs.PR_HEAD_SHA }}
       PR_MERGE_SHA: ${{ steps.get_sha.outputs.PR_MERGE_SHA }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: "0"
           ref: "refs/pull/${{needs.get-pr-number.outputs.PR_NUMBER}}/merge"
@@ -92,6 +99,8 @@ jobs:
   # case 1: `run-slow` (auto. infer with limited number of models, but in particular, new model)
   # case 2: `run-slow model_1, model_2`
   get-tests:
+    permissions:
+      contents: read
     runs-on: ubuntu-22.04
     needs: [get-pr-number, get-sha]
     if: ${{ needs.get-pr-number.outputs.PR_NUMBER != ''}}
@@ -99,7 +108,7 @@ jobs:
       models: ${{ steps.models_to_run.outputs.models }}
       quantizations: ${{ steps.models_to_run.outputs.quantizations }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: "0"
           ref: "refs/pull/${{needs.get-pr-number.outputs.PR_NUMBER}}/merge"
@@ -127,11 +136,11 @@ jobs:
       - name: Show models to test
         id: models_to_run
         run: |
-          echo "${{ env.models }}"
-          echo "models=${{ env.models }}" >> $GITHUB_ENV
-          echo "models=${{ env.models }}" >> $GITHUB_OUTPUT
-          echo "${{ env.quantizations }}"
-          echo "quantizations=${{ env.quantizations }}" >> $GITHUB_OUTPUT
+          echo "$models"
+          echo "models=$models" >> $GITHUB_ENV
+          echo "models=$models" >> $GITHUB_OUTPUT
+          echo "$quantizations"
+          echo "quantizations=$quantizations" >> $GITHUB_OUTPUT
 
   reply_to_comment:
     name: Reply to the comment
@@ -146,13 +155,15 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MODELS: ${{ needs.get-tests.outputs.models }}
           BODY: "\n\nmodels: ${{ needs.get-tests.outputs.models }}\nquantizations: ${{ needs.get-tests.outputs.quantizations }}"
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ needs.get-pr-number.outputs.PR_NUMBER }}
         run: |
           gh api \
             --method POST \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            repos/${{ github.repository }}/issues/${{ needs.get-pr-number.outputs.PR_NUMBER }}/comments \
-            -f "body=This comment contains run-slow, running the specified jobs: ${{ env.BODY }} ..."
+            "repos/$REPO/issues/$PR_NUMBER/comments" \
+            -f "body=This comment contains run-slow, running the specified jobs: $BODY ..."
 
   create_run:
     name: Create run
@@ -178,6 +189,8 @@ jobs:
             -f "target_url=$GITHUB_RUN_URL" -f "state=pending" -f "description=Slow CI job" -f "context=pytest/custom-tests"
 
   run_models_gpu:
+    permissions:
+      contents: read
     name: Run all tests for the model
     if: ${{ needs.get-tests.outputs.models != '[]' }}
     needs: [get-pr-number, get-sha, get-tests, create_run]
@@ -194,17 +207,20 @@ jobs:
     steps:
       - name: Echo input and matrix info
         shell: bash
+        env:
+          FOLDERS: ${{ matrix.folders }}
         run: |
-          echo "${{ matrix.folders }}"
+          echo "$FOLDERS"
 
       - name: Echo folder ${{ matrix.folders }}
         shell: bash
         # For folders like `models/bert`, set an env. var. (`matrix_folders`) to `models_bert`, which will be used to
         # set the artifact folder names (because the character `/` is not allowed).
+        env:
+          FOLDERS: ${{ matrix.folders }}
         run: |
-          echo "${{ matrix.folders }}"
-          matrix_folders=${{ matrix.folders }}
-          matrix_folders=${matrix_folders/'models/'/'models_'}
+          echo "$FOLDERS"
+          matrix_folders="${FOLDERS/'models/'/'models_'}"
           echo "$matrix_folders"
           echo "matrix_folders=$matrix_folders" >> $GITHUB_ENV
 
@@ -260,31 +276,39 @@ jobs:
 
       - name: Run all tests on GPU
         working-directory: /transformers
+        env:
+          FOLDERS: ${{ matrix.folders }}
         run: |
-          export CUDA_VISIBLE_DEVICES="$(python3 utils/set_cuda_devices_for_ci.py --test_folder ${{ matrix.folders }})"
+          export CUDA_VISIBLE_DEVICES="$(python3 utils/set_cuda_devices_for_ci.py --test_folder "$FOLDERS")"
           echo $CUDA_VISIBLE_DEVICES
-          python3 -m pytest -v -rsfE --make-reports=${{ env.machine_type }}_run_models_gpu_${{ matrix.folders }}_test_reports tests/${{ matrix.folders }}
+          python3 -m pytest -v -rsfE --make-reports="${machine_type}_run_models_gpu_${FOLDERS}_test_reports" "tests/$FOLDERS"
 
       - name: Failure short reports
         if: ${{ failure() }}
         continue-on-error: true
-        run: cat /transformers/reports/${{ env.machine_type }}_run_models_gpu_${{ matrix.folders }}_test_reports/failures_short.txt
+        env:
+          FOLDERS: ${{ matrix.folders }}
+        run: cat "/transformers/reports/${machine_type}_run_models_gpu_${FOLDERS}_test_reports/failures_short.txt"
 
       - name: Make sure report directory exists
         shell: bash
+        env:
+          FOLDERS: ${{ matrix.folders }}
         run: |
-          mkdir -p /transformers/reports/${{ env.machine_type }}_run_models_gpu_${{ matrix.folders }}_test_reports
-          echo "hello" > /transformers/reports/${{ env.machine_type }}_run_models_gpu_${{ matrix.folders }}_test_reports/hello.txt
-          echo "${{ env.machine_type }}_run_models_gpu_${{ matrix.folders }}_test_reports"
+          mkdir -p "/transformers/reports/${machine_type}_run_models_gpu_${FOLDERS}_test_reports"
+          echo "hello" > "/transformers/reports/${machine_type}_run_models_gpu_${FOLDERS}_test_reports/hello.txt"
+          echo "${machine_type}_run_models_gpu_${FOLDERS}_test_reports"
 
       - name: "Test suite reports artifacts: ${{ env.machine_type }}_run_models_gpu_${{ env.matrix_folders }}_test_reports"
         if: ${{ always() }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ env.machine_type }}_run_models_gpu_${{ env.matrix_folders }}_test_reports
           path: /transformers/reports/${{ env.machine_type }}_run_models_gpu_${{ matrix.folders }}_test_reports
 
   run_quantization_torch_gpu:
+    permissions:
+      contents: read
     name: Run all tests for a quantization
     if: ${{ needs.get-tests.outputs.quantizations != '[]' }}
     needs: [get-pr-number, get-sha, get-tests, create_run]
@@ -301,10 +325,11 @@ jobs:
     steps:
       - name: Echo folder ${{ matrix.folders }}
         shell: bash
+        env:
+          FOLDERS: ${{ matrix.folders }}
         run: |
-          echo "${{ matrix.folders }}"
-          matrix_folders=${{ matrix.folders }}
-          matrix_folders=${matrix_folders/'quantization/'/'quantization_'}
+          echo "$FOLDERS"
+          matrix_folders="${FOLDERS/'quantization/'/'quantization_'}"
           echo "$matrix_folders"
           echo "matrix_folders=$matrix_folders" >> $GITHUB_ENV
 
@@ -359,24 +384,30 @@ jobs:
 
       - name: Run quantization tests on GPU
         working-directory: /transformers
+        env:
+          FOLDERS: ${{ matrix.folders }}
         run: |
-          python3 -m pytest -v --make-reports=${{ env.machine_type }}_run_quantization_torch_gpu_${{ matrix.folders }}_test_reports tests/${{ matrix.folders }}
+          python3 -m pytest -v --make-reports="${machine_type}_run_quantization_torch_gpu_${FOLDERS}_test_reports" "tests/$FOLDERS"
 
       - name: Failure short reports
         if: ${{ failure() }}
         continue-on-error: true
-        run: cat /transformers/reports/${{ env.machine_type }}_run_quantization_torch_gpu_${{ matrix.folders }}_test_reports/failures_short.txt
+        env:
+          FOLDERS: ${{ matrix.folders }}
+        run: cat "/transformers/reports/${machine_type}_run_quantization_torch_gpu_${FOLDERS}_test_reports/failures_short.txt"
 
       - name: Make sure report directory exists
         shell: bash
+        env:
+          FOLDERS: ${{ matrix.folders }}
         run: |
-          mkdir -p /transformers/reports/${{ env.machine_type }}_run_quantization_gpu_${{ matrix.folders }}_test_reports
-          echo "hello" > /transformers/reports/${{ env.machine_type }}_run_quantization_gpu_${{ matrix.folders }}_test_reports/hello.txt
-          echo "${{ env.machine_type }}_run_quantization_gpu_${{ matrix.folders }}_test_reports"
+          mkdir -p "/transformers/reports/${machine_type}_run_quantization_gpu_${FOLDERS}_test_reports"
+          echo "hello" > "/transformers/reports/${machine_type}_run_quantization_gpu_${FOLDERS}_test_reports/hello.txt"
+          echo "${machine_type}_run_quantization_gpu_${FOLDERS}_test_reports"
 
       - name: "Test suite reports artifacts: ${{ env.machine_type }}_run_quantization_torch_gpu_${{ env.matrix_folders }}_test_reports"
         if: ${{ always() }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ env.machine_type }}_run_quantization_torch_gpu_${{ env.matrix_folders }}_test_reports
           path: /transformers/reports/${{ env.machine_type }}_run_quantization_torch_gpu_${{ matrix.folders }}_test_reports

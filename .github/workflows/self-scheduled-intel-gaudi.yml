@@ -31,6 +31,8 @@ env:
 
 jobs:
   setup:
+    permissions:
+      contents: read
     if: contains(fromJSON('["run_models_gpu", "run_trainer_and_fsdp_gpu"]'), inputs.job)
     name: Setup
     runs-on: ubuntu-latest
@@ -40,12 +42,12 @@ jobs:
       quantization_matrix: ${{ steps.set-matrix.outputs.quantization_matrix }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.10"
 
@@ -53,11 +55,13 @@ jobs:
         if: contains(fromJSON('["run_models_gpu", "run_trainer_and_fsdp_gpu"]'), inputs.job)
         name: Identify models to test
         working-directory: tests
+        env:
+          JOB: ${{ inputs.job }}
         run: |
-          if [ "${{ inputs.job }}" = "run_models_gpu" ]; then
-            echo "folder_slices=$(python3 ../utils/split_model_tests.py --num_splits ${{ env.NUM_SLICES }})" >> $GITHUB_OUTPUT
-            echo "slice_ids=$(python3 -c 'd = list(range(${{ env.NUM_SLICES }})); print(d)')" >> $GITHUB_OUTPUT
-          elif [ "${{ inputs.job }}" = "run_trainer_and_fsdp_gpu" ]; then
+          if [ "$JOB" = "run_models_gpu" ]; then
+            echo "folder_slices=$(python3 ../utils/split_model_tests.py --num_splits "$NUM_SLICES")" >> $GITHUB_OUTPUT
+            echo "slice_ids=$(python3 -c "d = list(range($NUM_SLICES)); print(d)")" >> $GITHUB_OUTPUT
+          elif [ "$JOB" = "run_trainer_and_fsdp_gpu" ]; then
             echo "folder_slices=[['trainer'], ['fsdp']]" >> $GITHUB_OUTPUT
             echo "slice_ids=[0, 1]" >> $GITHUB_OUTPUT
           fi
@@ -105,6 +109,7 @@ jobs:
     secrets: inherit
 
   run_pipelines_torch_gpu:
+    permissions: {}
     if: ${{ inputs.job == 'run_pipelines_torch_gpu' }}
     name: Pipelines
     strategy:
@@ -124,7 +129,7 @@ jobs:
         --shm-size=64G
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
@@ -168,12 +173,13 @@ jobs:
 
       - name: "Test suite reports artifacts: ${{ env.machine_type }}_run_pipelines_torch_gpu_test_reports"
         if: ${{ always() }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ env.machine_type }}_run_pipelines_torch_gpu_test_reports
           path: reports/${{ env.machine_type }}_run_pipelines_torch_gpu_test_reports
 
   run_examples_gpu:
+    permissions: {}
     if: ${{ inputs.job == 'run_examples_gpu' }}
     name: Examples directory
     strategy:
@@ -193,7 +199,7 @@ jobs:
         --shm-size=64G
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
@@ -240,12 +246,13 @@ jobs:
 
       - name: "Test suite reports artifacts: ${{ env.machine_type }}_run_examples_gpu_test_reports"
         if: ${{ always() }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ env.machine_type }}_run_examples_gpu_test_reports
           path: reports/${{ env.machine_type }}_run_examples_gpu_test_reports
 
   run_torch_cuda_extensions_gpu:
+    permissions: {}
     if: ${{ inputs.job == 'run_torch_cuda_extensions_gpu' }}
     name: Intel Gaudi deepspeed tests
     strategy:
@@ -265,7 +272,7 @@ jobs:
         --shm-size=64G
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
@@ -312,7 +319,7 @@ jobs:
 
       - name: "Test suite reports artifacts: ${{ env.machine_type }}_run_torch_cuda_extensions_gpu_test_reports"
         if: ${{ always() }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ env.machine_type }}_run_torch_cuda_extensions_gpu_test_reports
           path: reports/${{ env.machine_type }}_run_torch_cuda_extensions_gpu_test_reports
