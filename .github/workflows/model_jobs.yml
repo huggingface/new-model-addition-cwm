@@ -44,6 +44,8 @@ env:
 
 jobs:
   run_models_gpu:
+    permissions:
+      contents: read
     name: " "
     strategy:
       max-parallel: 8
@@ -60,25 +62,33 @@ jobs:
     steps:
       - name: Echo input and matrix info
         shell: bash
+        env:
+          FOLDER_SLICES: ${{ inputs.folder_slices }}
+          MATRIX_FOLDERS: ${{ matrix.folders }}
+          SLICE_INFO: ${{ toJson(fromJson(inputs.folder_slices)[inputs.slice_id]) }}
         run: |
-          echo "${{ inputs.folder_slices }}"
-          echo "${{ matrix.folders }}"
-          echo "${{ toJson(fromJson(inputs.folder_slices)[inputs.slice_id]) }}"
+          echo "$FOLDER_SLICES"
+          echo "$MATRIX_FOLDERS"
+          echo "$SLICE_INFO"
 
       - name: Echo folder ${{ matrix.folders }}
         shell: bash
         # For folders like `models/bert`, set an env. var. (`matrix_folders`) to `models_bert`, which will be used to
         # set the artifact folder names (because the character `/` is not allowed).
+        env:
+          MATRIX_FOLDERS: ${{ matrix.folders }}
         run: |
-          echo "${{ matrix.folders }}"
-          matrix_folders=${{ matrix.folders }}
+          echo "$MATRIX_FOLDERS"
+          matrix_folders="$MATRIX_FOLDERS"
           matrix_folders=${matrix_folders/'models/'/'models_'}
           echo "$matrix_folders"
           echo "matrix_folders=$matrix_folders" >> $GITHUB_ENV
 
       - name: Update clone
         working-directory: /transformers
-        run: git fetch && git checkout ${{ inputs.commit_sha || github.sha }}
+        env:
+          COMMIT_SHA: ${{ inputs.commit_sha || github.sha }}
+        run: git fetch && git checkout "$COMMIT_SHA"
 
       - name: Reinstall transformers in edit mode (remove the one installed during docker image build)
         working-directory: /transformers
@@ -113,15 +123,17 @@ jobs:
         id: set_machine_type
         working-directory: /transformers
         shell: bash
+        env:
+          MACHINE_TYPE: ${{ inputs.machine_type }}
         run: |
-          echo "${{ inputs.machine_type }}"
+          echo "$MACHINE_TYPE"
 
-          if [ "${{ inputs.machine_type }}" = "aws-g5-4xlarge-cache" ]; then
+          if [ "$MACHINE_TYPE" = "aws-g5-4xlarge-cache" ]; then
             machine_type=single-gpu
-          elif [ "${{ inputs.machine_type }}" = "aws-g5-12xlarge-cache" ]; then
+          elif [ "$MACHINE_TYPE" = "aws-g5-12xlarge-cache" ]; then
             machine_type=multi-gpu
           else
-            machine_type=${{ inputs.machine_type }}
+            machine_type="$MACHINE_TYPE"
           fi
 
           echo "$machine_type"
@@ -130,15 +142,20 @@ jobs:
 
       - name: Create report directory if it doesn't exist
         shell: bash
+        env:
+          REPORT_DIR: /transformers/reports/${{ env.machine_type }}_${{ inputs.report_name_prefix }}_${{ env.matrix_folders }}_test_reports
         run: |
-          mkdir -p /transformers/reports/${{ env.machine_type }}_${{ inputs.report_name_prefix }}_${{ env.matrix_folders }}_test_reports
-          echo "dummy" > /transformers/reports/${{ env.machine_type }}_${{ inputs.report_name_prefix }}_${{ env.matrix_folders }}_test_reports/dummy.txt
-          ls -la /transformers/reports/${{ env.machine_type }}_${{ inputs.report_name_prefix }}_${{ env.matrix_folders }}_test_reports
+          mkdir -p "$REPORT_DIR"
+          echo "dummy" > "$REPORT_DIR/dummy.txt"
+          ls -la "$REPORT_DIR"
 
       - name: Run all tests on GPU
         working-directory: /transformers
+        env:
+          REPORT_NAME: ${{ env.machine_type }}_${{ inputs.report_name_prefix }}_${{ env.matrix_folders }}_test_reports
+          MATRIX_FOLDERS: ${{ matrix.folders }}
         run: |
-          script -q -c "PATCH_TESTING_METHODS_TO_COLLECT_OUTPUTS=yes _PATCHED_TESTING_METHODS_OUTPUT_DIR=/transformers/reports/${{ env.machine_type }}_${{ inputs.report_name_prefix }}_${{ env.matrix_folders }}_test_reports python3 -m pytest -rsfE -v --make-reports=${{ env.machine_type }}_${{ inputs.report_name_prefix }}_${{ env.matrix_folders }}_test_reports tests/${{ matrix.folders }}" test_outputs.txt
+          script -q -c "PATCH_TESTING_METHODS_TO_COLLECT_OUTPUTS=yes _PATCHED_TESTING_METHODS_OUTPUT_DIR=/transformers/reports/$REPORT_NAME python3 -m pytest -rsfE -v --make-reports=$REPORT_NAME tests/$MATRIX_FOLDERS" test_outputs.txt
           ls -la
           # Extract the exit code from the output file
           EXIT_CODE=$(tail -1 test_outputs.txt | grep -o 'COMMAND_EXIT_CODE="[0-9]*"' | cut -d'"' -f2)
@@ -149,19 +166,25 @@ jobs:
         # This step is only to show information on Github Actions log.
         # Always mark this step as successful, even if the report directory or the file `failures_short.txt` in it doesn't exist
         continue-on-error: true
-        run: cat /transformers/reports/${{ env.machine_type }}_${{ inputs.report_name_prefix }}_${{ env.matrix_folders }}_test_reports/failures_short.txt
+        env:
+          REPORT_DIR: /transformers/reports/${{ env.machine_type }}_${{ inputs.report_name_prefix }}_${{ env.matrix_folders }}_test_reports
+        run: cat "$REPORT_DIR/failures_short.txt"
 
       - name: Captured information
         if: ${{ failure() }}
         continue-on-error: true
+        env:
+          REPORT_DIR: /transformers/reports/${{ env.machine_type }}_${{ inputs.report_name_prefix }}_${{ env.matrix_folders }}_test_reports
         run: |
-          cat /transformers/reports/${{ env.machine_type }}_${{ inputs.report_name_prefix }}_${{ env.matrix_folders }}_test_reports/captured_info.txt
+          cat "$REPORT_DIR/captured_info.txt"
 
       - name: Copy test_outputs.txt
         if: ${{ always() }}
         continue-on-error: true
+        env:
+          REPORT_DIR: /transformers/reports/${{ env.machine_type }}_${{ inputs.report_name_prefix }}_${{ env.matrix_folders }}_test_reports
         run: |
-          cp /transformers/test_outputs.txt /transformers/reports/${{ env.machine_type }}_${{ inputs.report_name_prefix }}_${{ env.matrix_folders }}_test_reports
+          cp /transformers/test_outputs.txt "$REPORT_DIR"
 
       - name: "Test suite reports artifacts: ${{ env.machine_type }}_${{ inputs.report_name_prefix }}_${{ env.matrix_folders }}_test_reports"
         if: ${{ always() }}

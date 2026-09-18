@@ -30,8 +30,12 @@ env:
   # This token is created under the bot `hf-transformers-bot`.
   HF_HUB_READ_TOKEN: ${{ secrets.HF_HUB_READ_TOKEN }}
 
+permissions: {}
+
 jobs:
   benchmark-v2:
+    permissions:
+      contents: read
     name: Benchmark v2
     runs-on: ${{ inputs.runner }}
     if: |
@@ -42,7 +46,7 @@ jobs:
       options: --gpus all --privileged --ipc host --shm-size "16gb"
     steps:
       - name: Get repo
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.commit_sha || github.sha }}
 
@@ -68,10 +72,14 @@ jobs:
         run: |
           echo "Running benchmarks"
           python3 run_benchmarks.py \
-          --commit-id '${{ inputs.commit_sha || github.sha }}' \
-          --run-id '${{ inputs.run_id }}' \
-          --push-to-hub '${{ inputs.benchmark_repo_id}}' \
-          --token '${{ secrets.TRANSFORMERS_CI_RESULTS_UPLOAD_TOKEN }}' \
+          --commit-id "$COMMIT_ID" \
+          --run-id "$RUN_ID" \
+          --push-to-hub "$BENCHMARK_REPO_ID" \
+          --token "$UPLOAD_TOKEN" \
           --log-level INFO
         env:
           HF_TOKEN: ${{ secrets.HF_HUB_READ_TOKEN }}
+          COMMIT_ID: ${{ inputs.commit_sha || github.sha }}
+          RUN_ID: ${{ inputs.run_id }}
+          BENCHMARK_REPO_ID: ${{ inputs.benchmark_repo_id }}
+          UPLOAD_TOKEN: ${{ secrets.TRANSFORMERS_CI_RESULTS_UPLOAD_TOKEN }}

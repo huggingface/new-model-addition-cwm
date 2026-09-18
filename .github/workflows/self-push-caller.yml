@@ -14,12 +14,14 @@ on:
 
 jobs:
   check-for-setup:
+      permissions:
+        contents: read
       runs-on: ubuntu-22.04
       name: Check if setup was changed
       outputs:
         changed: ${{ steps.was_changed.outputs.changed }}
       steps:
-        - uses: actions/checkout@v7
+        - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
           with: 
             fetch-depth: "2"
         
@@ -45,6 +47,7 @@ jobs:
     secrets: inherit
 
   run_push_ci:
+    permissions: {}
     name: Trigger Push CI
     runs-on: ubuntu-22.04
     if: ${{ always() }}
