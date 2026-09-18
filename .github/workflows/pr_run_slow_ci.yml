@@ -3,6 +3,9 @@ on:
   pull_request_target:
     types: [opened, synchronize, reopened]
 
+permissions:
+  contents: read
+
 jobs:
   get-pr-number:
     name: Get PR number
@@ -17,6 +20,8 @@ jobs:
       pr_number: ${{ needs.get-pr-number.outputs.PR_NUMBER }}
 
   get-jobs:
+    permissions:
+      contents: read
     name: Get test files to run
     runs-on: ubuntu-22.04
     needs: [get-pr-number, get-pr-info]
@@ -25,28 +30,36 @@ jobs:
     steps:
       - name: Get repository content
         id: repo_content
-        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410  # v6
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # v9.0.0
+        env:
+          PR_HEAD_REPO_OWNER: ${{ needs.get-pr-info.outputs.PR_HEAD_REPO_OWNER }}
+          PR_HEAD_REPO_NAME: ${{ needs.get-pr-info.outputs.PR_HEAD_REPO_NAME }}
+          PR_HEAD_SHA: ${{ needs.get-pr-info.outputs.PR_HEAD_SHA }}
         with:
           script: |
+            const owner = process.env.PR_HEAD_REPO_OWNER;
+            const repo = process.env.PR_HEAD_REPO_NAME;
+            const ref = process.env.PR_HEAD_SHA;
+
             const { data: tests_dir } = await github.rest.repos.getContent({
-              owner: '${{ needs.get-pr-info.outputs.PR_HEAD_REPO_OWNER }}',
-              repo: '${{ needs.get-pr-info.outputs.PR_HEAD_REPO_NAME }}',
+              owner: owner,
+              repo: repo,
               path: 'tests',
-              ref: '${{ needs.get-pr-info.outputs.PR_HEAD_SHA }}',
+              ref: ref,
             });
 
             const { data: tests_models_dir } = await github.rest.repos.getContent({
-              owner: '${{ needs.get-pr-info.outputs.PR_HEAD_REPO_OWNER }}',
-              repo: '${{ needs.get-pr-info.outputs.PR_HEAD_REPO_NAME }}',
+              owner: owner,
+              repo: repo,
               path: 'tests/models',
-              ref: '${{ needs.get-pr-info.outputs.PR_HEAD_SHA }}',
+              ref: ref,
             });
 
             const { data: tests_quantization_dir } = await github.rest.repos.getContent({
-              owner: '${{ needs.get-pr-info.outputs.PR_HEAD_REPO_OWNER }}',
-              repo: '${{ needs.get-pr-info.outputs.PR_HEAD_REPO_NAME }}',
+              owner: owner,
+              repo: repo,
               path: 'tests/quantization',
-              ref: '${{ needs.get-pr-info.outputs.PR_HEAD_SHA }}',
+              ref: ref,
             });
 
             core.setOutput('tests_dir', tests_dir);
@@ -54,33 +67,33 @@ jobs:
             core.setOutput('tests_quantization_dir', tests_quantization_dir);
 
       # This checkout to the main branch
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           fetch-depth: "0"
 
       - name: Write pr_files file
+        env:
+          PR_FILES: ${{ needs.get-pr-info.outputs.PR_FILES }}
         run: |
-          cat > pr_files.txt << 'EOF'
-          ${{ needs.get-pr-info.outputs.PR_FILES }}
-          EOF
+          printf '%s\n' "$PR_FILES" > pr_files.txt
 
       - name: Write tests_dir file
+        env:
+          TESTS_DIR: ${{ steps.repo_content.outputs.tests_dir }}
         run: |
-          cat > tests_dir.txt << 'EOF'
-          ${{ steps.repo_content.outputs.tests_dir }}
-          EOF
+          printf '%s\n' "$TESTS_DIR" > tests_dir.txt
 
       - name: Write tests_models_dir file
+        env:
+          TESTS_MODELS_DIR: ${{ steps.repo_content.outputs.tests_models_dir }}
         run: |
-          cat > tests_models_dir.txt << 'EOF'
-          ${{ steps.repo_content.outputs.tests_models_dir }}
-          EOF
+          printf '%s\n' "$TESTS_MODELS_DIR" > tests_models_dir.txt
 
       - name: Write tests_quantization_dir file
+        env:
+          TESTS_QUANTIZATION_DIR: ${{ steps.repo_content.outputs.tests_quantization_dir }}
         run: |
-          cat > tests_quantization_dir.txt << 'EOF'
-          ${{ steps.repo_content.outputs.tests_quantization_dir }}
-          EOF
+          printf '%s\n' "$TESTS_QUANTIZATION_DIR" > tests_quantization_dir.txt
 
       - name: Run script to get jobs to run
         id: get_jobs
@@ -101,12 +114,13 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Check and update comment if needed
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b  # v7
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # v9.0.0
         env:
           BODY: "\n\nrun-slow: ${{ needs.get-jobs.outputs.jobs }}"
+          PR_NUMBER: ${{ needs.get-pr-number.outputs.PR_NUMBER }}
         with:
           script: |
-            const prNumber = ${{ needs.get-pr-number.outputs.PR_NUMBER }};
+            const prNumber = Number(process.env.PR_NUMBER);
             const commentPrefix = "**[For maintainers]** Suggested jobs to run (before merge)";
             const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000); // 30 minutes ago
             const newBody = `${commentPrefix}${process.env.BODY}`;

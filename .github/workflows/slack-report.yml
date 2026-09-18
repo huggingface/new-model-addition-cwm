@@ -32,24 +32,31 @@ on:
 env:
   TRANSFORMERS_CI_RESULTS_UPLOAD_TOKEN: ${{ secrets.TRANSFORMERS_CI_RESULTS_UPLOAD_TOKEN }}
 
+permissions: {}
+
 jobs:
   send_results:
+    permissions:
+      actions: read
+      contents: read
     name: Send results to webhook
     runs-on: ubuntu-22.04
     if: always() && !cancelled()
     steps:
       - name: Preliminary job status
         shell: bash
+        env:
+          SETUP_STATUS: ${{ inputs.setup_status }}
         # For the meaning of these environment variables, see the job `Setup`
         run: |
-          echo "Setup status: ${{ inputs.setup_status }}"
+          echo "Setup status: $SETUP_STATUS"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 2
           ref: ${{ inputs.commit_sha || github.sha }}
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
 
       - name: Prepare some setup values
         run: |
@@ -81,6 +88,8 @@ jobs:
           CI_TEST_JOB: ${{ inputs.job }}
           SETUP_STATUS: ${{ inputs.setup_status }}
           REPORT_REPO_ID: ${{ inputs.report_repo_id }}
+          QUANTIZATION_MATRIX: ${{ inputs.quantization_matrix }}
+          FOLDER_SLICES: ${{ inputs.folder_slices }}
         # We pass `needs.setup.outputs.matrix` as the argument. A processing in `notification_service.py` to change
         # `models/bert` to `models_bert` is required, as the artifact names use `_` instead of `/`.
         # For a job that doesn't depend on (i.e. `needs`) `setup`, the value for `inputs.folder_slices` would be an
@@ -89,15 +98,15 @@ jobs:
           pip install huggingface_hub
           pip install slack_sdk
           pip show slack_sdk
-          if [ "${{ inputs.quantization_matrix }}" != "" ]; then
-            python utils/notification_service.py "${{ inputs.quantization_matrix }}"
+          if [ "$QUANTIZATION_MATRIX" != "" ]; then
+            python utils/notification_service.py "$QUANTIZATION_MATRIX"
           else
-            python utils/notification_service.py "${{ inputs.folder_slices }}"
+            python utils/notification_service.py "$FOLDER_SLICES"
           fi
 
       # Upload complete failure tables, as they might be big and only truncated versions could be sent to Slack.
       - name: Failure table artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ci_results_${{ inputs.job }}
           path: ci_results_${{ inputs.job }}

@@ -17,6 +17,9 @@ on:
       - "utils/**"
   repository_dispatch:
 
+permissions:
+  contents: read
+
 env:
   HF_HOME: /mnt/cache
   TRANSFORMERS_IS_CI: yes
@@ -28,6 +31,8 @@ env:
 
 jobs:
   setup:
+    permissions:
+      contents: read
     name: Setup
     strategy:
       matrix:
@@ -98,7 +103,7 @@ jobs:
           python3 utils/tests_fetcher.py --diff_with_last_commit | tee test_preparation.txt
 
       - name: Report fetched tests
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: test_fetched
           path: /transformers/test_preparation.txt
@@ -123,6 +128,8 @@ jobs:
           echo "test_map=$test_map" >> $GITHUB_OUTPUT
 
   run_tests_single_gpu:
+    permissions:
+      contents: read
     name: Model tests
     needs: setup
     # `dummy` means there is no test to run
@@ -230,12 +237,14 @@ jobs:
 
       - name: "Test suite reports artifacts: ${{ env.machine_type }}_run_all_tests_gpu_${{ env.matrix_folders }}_test_reports"
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ env.machine_type }}_run_all_tests_gpu_${{ env.matrix_folders }}_test_reports
           path: /transformers/reports/${{ env.machine_type }}_tests_gpu_${{ matrix.folders }}
 
   run_tests_multi_gpu:
+    permissions:
+      contents: read
     name: Model tests
     needs: setup
     # `dummy` means there is no test to run
@@ -345,12 +354,14 @@ jobs:
 
       - name: "Test suite reports artifacts: ${{ env.machine_type }}_run_all_tests_gpu_${{ env.matrix_folders }}_test_reports"
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ env.machine_type }}_run_all_tests_gpu_${{ env.matrix_folders }}_test_reports
           path: /transformers/reports/${{ env.machine_type }}_tests_gpu_${{ matrix.folders }}
 
   run_tests_torch_cuda_extensions_single_gpu:
+    permissions:
+      contents: read
     name: Torch CUDA extension tests
     needs: setup
     if: contains(fromJson(needs.setup.outputs.matrix), 'deepspeed') || contains(fromJson(needs.setup.outputs.matrix), 'extended')
@@ -455,12 +466,14 @@ jobs:
 
       - name: "Test suite reports artifacts: ${{ env.machine_type }}_run_torch_cuda_extensions_gpu_test_reports"
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ env.machine_type }}_run_torch_cuda_extensions_gpu_test_reports
           path: /workspace/transformers/reports/${{ env.machine_type }}_run_torch_cuda_extensions_gpu_test_reports
 
   run_tests_torch_cuda_extensions_multi_gpu:
+    permissions:
+      contents: read
     name: Torch CUDA extension tests
     needs: setup
     if: contains(fromJson(needs.setup.outputs.matrix), 'deepspeed') || contains(fromJson(needs.setup.outputs.matrix), 'extended')
@@ -565,12 +578,14 @@ jobs:
 
       - name: "Test suite reports artifacts: ${{ env.machine_type }}_run_torch_cuda_extensions_gpu_test_reports"
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ env.machine_type }}_run_torch_cuda_extensions_gpu_test_reports
           path: /workspace/transformers/reports/${{ env.machine_type }}_run_torch_cuda_extensions_gpu_test_reports
 
   send_results:
+    permissions:
+      contents: read
     name: Send results to webhook
     runs-on: ubuntu-22.04
     if: always()
@@ -613,7 +628,7 @@ jobs:
           echo "env.CI_BRANCH = ${{ env.CI_BRANCH }}"
           echo "env.CI_SHA = ${{ env.CI_SHA }}"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         # To avoid failure when multiple commits are merged into `main` in a short period of time.
         # Checking out to an old commit beyond the fetch depth will get an error `fatal: reference is not a tree: ...
         # (Only required for `workflow_run` event, where we get the latest HEAD on `main` instead of the event commit)
@@ -628,7 +643,7 @@ jobs:
           git checkout ${{ env.CI_SHA }}
           echo "log = $(git log -n 1)"
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
       - name: Send message to Slack
         env:
           CI_SLACK_BOT_TOKEN: ${{ secrets.CI_SLACK_BOT_TOKEN }}

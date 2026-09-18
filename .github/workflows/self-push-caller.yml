@@ -14,18 +14,20 @@ on:
 
 jobs:
   check-for-setup:
+      permissions:
+        contents: read
       runs-on: ubuntu-22.04
       name: Check if setup was changed
       outputs:
         changed: ${{ steps.was_changed.outputs.changed }}
       steps:
-        - uses: actions/checkout@v4
+        - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
           with: 
             fetch-depth: "2"
         
         - name: Get changed files
           id: changed-files
-          uses: tj-actions/changed-files@1c8e6069583811afb28f97afeaf8e7da80c6be5c
+          uses: tj-actions/changed-files@934b2d2c7e653bb8c968afed5a0428617f09aa24
         
         - name: Was setup changed 
           id: was_changed
@@ -45,6 +47,7 @@ jobs:
     secrets: inherit
 
   run_push_ci:
+    permissions: {}
     name: Trigger Push CI
     runs-on: ubuntu-22.04
     if: ${{ always() }}
