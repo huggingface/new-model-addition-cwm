@@ -42,7 +42,7 @@ jobs:
       options: --gpus all --privileged --ipc host --shm-size "16gb"
     steps:
       - name: Get repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.commit_sha || github.sha }}
 

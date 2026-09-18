@@ -44,12 +44,12 @@ jobs:
         run: |
           echo "Setup status: ${{ inputs.setup_status }}"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
           ref: ${{ inputs.commit_sha || github.sha }}
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
 
       - name: Prepare some setup values
         run: |
@@ -97,7 +97,7 @@ jobs:
 
       # Upload complete failure tables, as they might be big and only truncated versions could be sent to Slack.
       - name: Failure table artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ci_results_${{ inputs.job }}
           path: ci_results_${{ inputs.job }}
