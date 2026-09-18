@@ -66,6 +66,9 @@ jobs:
     secrets: inherit
 
   send_results:
+    permissions:
+      actions: read
+      contents: read
     name: Send results to webhook
     runs-on: ubuntu-22.04
     if: always()

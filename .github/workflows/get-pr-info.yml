@@ -91,12 +91,14 @@ jobs:
       - name: Extract PR details
         id: pr_info
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          PR_NUMBER: ${{ inputs.pr_number }}
         with:
           script: |            
             const { data: pr } = await github.rest.pulls.get({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              pull_number: ${{ inputs.pr_number }}
+              pull_number: Number(process.env.PR_NUMBER)
             });
 
             const { data: head_commit }  = await github.rest.repos.getCommit({
@@ -114,7 +116,7 @@ jobs:
             const { data: files } = await github.rest.pulls.listFiles({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              pull_number: ${{ inputs.pr_number }}
+              pull_number: Number(process.env.PR_NUMBER)
             });
 
             core.setOutput('head_repo_full_name', pr.head.repo.full_name);
