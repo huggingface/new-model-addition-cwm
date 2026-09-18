@@ -34,6 +34,14 @@ jobs:
     permissions:
       contents: read
     name: Setup
+    # Hardening for the `workflow_run` trigger: only process runs that succeeded and that
+    # originated from this repository (never from a fork), so untrusted code from forks
+    # can never be checked out / executed by this privileged workflow.
+    if: |
+      github.event_name != 'workflow_run' || (
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_repository.full_name == github.repository
+      )
     strategy:
       matrix:
         machine_type: [aws-g5-4xlarge-cache, aws-g5-12xlarge-cache]
