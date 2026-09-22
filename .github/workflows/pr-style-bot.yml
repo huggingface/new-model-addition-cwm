@@ -10,6 +10,14 @@ permissions:
 
 jobs:
   style:
+    if: >-
+      github.event.issue.pull_request != null &&
+      contains(github.event.comment.body, '@bot /style') &&
+      (
+        github.event.comment.author_association == 'OWNER' ||
+        github.event.comment.author_association == 'MEMBER' ||
+        github.event.comment.author_association == 'COLLABORATOR'
+      )
     uses: huggingface/huggingface_hub/.github/workflows/style-bot-action.yml@8d4fba634e072bb0685a9ec4b9234c741227a2f9  # main
     with:
       python_quality_dependencies: "[quality]"
