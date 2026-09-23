@@ -62,11 +62,13 @@ jobs:
       - name: Set `split_keys`
         shell: bash
         run: |
-          echo "${{ matrix.split_keys }}"
-          split_keys=${{ matrix.split_keys }}
+          echo "${MATRIX_SPLIT_KEYS}"
+          split_keys=${MATRIX_SPLIT_KEYS}
           split_keys=${split_keys//'/'/'_'}
           echo "split_keys"
           echo "split_keys=$split_keys" >> $GITHUB_ENV
+        env:
+          MATRIX_SPLIT_KEYS: ${{ matrix.split_keys }}
 
       - name: Run doctests
         working-directory: /transformers
