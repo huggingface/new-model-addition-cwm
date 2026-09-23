@@ -32,11 +32,13 @@ jobs:
         - name: Was setup changed 
           id: was_changed
           run: |
-            for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
+            for file in ${STEPS_CHANGED_FILES_OUTPUTS_ALL_CHANGED_FILES}; do
               if [ `basename "${file}"` = "setup.py" ]; then
                 echo "changed=1" >> $GITHUB_OUTPUT
               fi
             done
+          env:
+            STEPS_CHANGED_FILES_OUTPUTS_ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
 
   build-docker-containers:
     needs: check-for-setup

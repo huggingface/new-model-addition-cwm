@@ -205,12 +205,14 @@ jobs:
         # For folders like `models/bert`, set an env. var. (`matrix_folders`) to `models_bert`, which will be used to
         # set the artifact folder names (because the character `/` is not allowed).
         run: |
-          echo "${{ matrix.folders }}"
+          echo "${MATRIX_FOLDERS}"
           echo "${{ fromJson(needs.setup.outputs.test_map)[matrix.folders] }}"
-          matrix_folders=${{ matrix.folders }}
+          matrix_folders=${MATRIX_FOLDERS}
           matrix_folders=${matrix_folders/'models/'/'models_'}
           echo "$matrix_folders"
           echo "matrix_folders=$matrix_folders" >> $GITHUB_ENV
+        env:
+          MATRIX_FOLDERS: ${{ matrix.folders }}
 
       - name: NVIDIA-SMI
         run: |
@@ -320,12 +322,14 @@ jobs:
         # For folders like `models/bert`, set an env. var. (`matrix_folders`) to `models_bert`, which will be used to
         # set the artifact folder names (because the character `/` is not allowed).
         run: |
-          echo "${{ matrix.folders }}"
+          echo "${MATRIX_FOLDERS}"
           echo "${{ fromJson(needs.setup.outputs.test_map)[matrix.folders] }}"
-          matrix_folders=${{ matrix.folders }}
+          matrix_folders=${MATRIX_FOLDERS}
           matrix_folders=${matrix_folders/'models/'/'models_'}
           echo "$matrix_folders"
           echo "matrix_folders=$matrix_folders" >> $GITHUB_ENV
+        env:
+          MATRIX_FOLDERS: ${{ matrix.folders }}
 
       - name: NVIDIA-SMI
         run: |
@@ -625,8 +629,8 @@ jobs:
 
       - name: print environment variables
         run: |
-          echo "env.CI_BRANCH = ${{ env.CI_BRANCH }}"
-          echo "env.CI_SHA = ${{ env.CI_SHA }}"
+          echo "env.CI_BRANCH = ${CI_BRANCH}"
+          echo "env.CI_SHA = ${CI_SHA}"
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         # To avoid failure when multiple commits are merged into `main` in a short period of time.
@@ -638,9 +642,9 @@ jobs:
       - name: Update clone using environment variables
         run: |
           echo "original branch = $(git branch --show-current)"
-          git fetch && git checkout ${{ env.CI_BRANCH }}
+          git fetch && git checkout ${CI_BRANCH}
           echo "updated branch = $(git branch --show-current)"
-          git checkout ${{ env.CI_SHA }}
+          git checkout ${CI_SHA}
           echo "log = $(git log -n 1)"
 
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -657,6 +661,7 @@ jobs:
           CI_TITLE_WORKFLOW_RUN: ${{ github.event.workflow_run.head_commit.message }}
           CI_SHA: ${{ env.CI_SHA }}
           SETUP_STATUS: ${{ needs.setup.result }}
+          NEEDS_SETUP_OUTPUTS_MATRIX: ${{ needs.setup.outputs.matrix }}
 
         # We pass `needs.setup.outputs.matrix` as the argument. A processing in `notification_service.py` to change
         # `models/bert` to `models_bert` is required, as the artifact names use `_` instead of `/`.
@@ -664,4 +669,4 @@ jobs:
           pip install huggingface_hub
           pip install slack_sdk
           pip show slack_sdk
-          python utils/notification_service.py "${{ needs.setup.outputs.matrix }}"
+          python utils/notification_service.py "${NEEDS_SETUP_OUTPUTS_MATRIX}"
