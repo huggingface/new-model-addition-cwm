@@ -5,19 +5,13 @@ on:
   issue_comment:
     types: [created]
 
-permissions: {}
-
-concurrency:
-  # Different commenters cannot cancel each other's runs.
-  group: style-bot-${{ github.event.issue.number || github.run_id }}-${{ github.event.comment.user.id }}
-  cancel-in-progress: true
+permissions:
+  pull-requests: write
+  contents: read
 
 jobs:
   style:
-    permissions:
-      contents: read  # Required for checkout and pull request inspection.
-      pull-requests: write  # Required for comments from the reusable workflow.
-    uses: huggingface/huggingface_hub/.github/workflows/style-bot-action.yml@da5e2441d56a1967db68833fccd2af0679049d57
+    uses: huggingface/huggingface_hub/.github/workflows/style-bot-action.yml@da5e2441d56a1967db68833fccd2af0679049d57  # Scope GITHUB_TOKEN permissions per job (2026-09-23)
     with:
       python_quality_dependencies: "[quality]"
       style_command_type: "default"
