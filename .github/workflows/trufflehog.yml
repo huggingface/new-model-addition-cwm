@@ -17,6 +17,6 @@ jobs:
         with:
           fetch-depth: 0
       - name: Secret Scanning
-        uses: trufflesecurity/trufflehog@main
+        uses: trufflesecurity/trufflehog@6404b6330c2f75f3d62757f3e642bebdde6bbc7b  # main
         with:
           extra_args: --results=verified,unknown
