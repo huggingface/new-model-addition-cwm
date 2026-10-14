@@ -64,7 +64,7 @@ jobs:
 
       - name: Post to Slack
         if: always()
-        uses: huggingface/hf-workflows/.github/actions/post-slack@main
+        uses: huggingface/hf-workflows/.github/actions/post-slack@74d74410045b1a50c8372e1b285886ebcebcdcc9  # main
         with:
           slack_channel: ${{ secrets.CI_SLACK_CHANNEL_DOCKER }}
           title: 🤗 Results of the transformers-all-latest-gpu-push-ci docker build
@@ -102,7 +102,7 @@ jobs:
 
       - name: Post to Slack
         if: always()
-        uses: huggingface/hf-workflows/.github/actions/post-slack@main
+        uses: huggingface/hf-workflows/.github/actions/post-slack@74d74410045b1a50c8372e1b285886ebcebcdcc9  # main
         with:
           slack_channel: ${{ secrets.CI_SLACK_CHANNEL_DOCKER}}
           title: 🤗 Results of the transformers-pytorch-deepspeed-latest-gpu docker build
@@ -145,7 +145,7 @@ jobs:
 
       - name: Post to Slack
         if: always()
-        uses: huggingface/hf-workflows/.github/actions/post-slack@main
+        uses: huggingface/hf-workflows/.github/actions/post-slack@74d74410045b1a50c8372e1b285886ebcebcdcc9  # main
         with:
           slack_channel: ${{ secrets.CI_SLACK_CHANNEL_DOCKER }}
           title: 🤗 Results of the transformers-pytorch-deepspeed-latest-gpu-push-ci docker build
@@ -183,7 +183,7 @@ jobs:
 
       - name: Post to Slack
         if: always()
-        uses: huggingface/hf-workflows/.github/actions/post-slack@main
+        uses: huggingface/hf-workflows/.github/actions/post-slack@74d74410045b1a50c8372e1b285886ebcebcdcc9  # main
         with:
           slack_channel: ${{ secrets.CI_SLACK_CHANNEL_DOCKER }}
           title: 🤗 Results of the huggingface/transformers-doc-builder docker build
@@ -223,7 +223,7 @@ jobs:
 
       - name: Post to Slack
         if: always()
-        uses: huggingface/hf-workflows/.github/actions/post-slack@main
+        uses: huggingface/hf-workflows/.github/actions/post-slack@74d74410045b1a50c8372e1b285886ebcebcdcc9  # main
         with:
           slack_channel: ${{ secrets.CI_SLACK_CHANNEL_DOCKER }}
           title: 🤗 Results of the huggingface/transformers-pytorch-gpudocker build
@@ -274,7 +274,7 @@ jobs:
 
       - name: Post to Slack
         if: always()
-        uses: huggingface/hf-workflows/.github/actions/post-slack@main
+        uses: huggingface/hf-workflows/.github/actions/post-slack@74d74410045b1a50c8372e1b285886ebcebcdcc9  # main
         with:
           slack_channel: ${{ secrets.CI_SLACK_CHANNEL_DOCKER }}
           title: 🤗 Results of the huggingface/transformers-pytorch-amd-gpu-push-ci build
@@ -325,7 +325,7 @@ jobs:
 
       - name: Post to Slack
         if: always()
-        uses: huggingface/hf-workflows/.github/actions/post-slack@main
+        uses: huggingface/hf-workflows/.github/actions/post-slack@74d74410045b1a50c8372e1b285886ebcebcdcc9  # main
         with:
           slack_channel: ${{ secrets.CI_SLACK_CHANNEL_DOCKER }}
           title: 🤗 Results of the transformers-pytorch-deepspeed-amd-gpu build
@@ -365,7 +365,7 @@ jobs:
 
       - name: Post to Slack
         if: always()
-        uses: huggingface/hf-workflows/.github/actions/post-slack@main
+        uses: huggingface/hf-workflows/.github/actions/post-slack@74d74410045b1a50c8372e1b285886ebcebcdcc9  # main
         with:
           slack_channel: ${{ secrets.CI_SLACK_CHANNEL_DOCKER }}
           title: 🤗 Results of the transformers-quantization-latest-gpu build
